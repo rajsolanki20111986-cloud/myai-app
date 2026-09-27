@@ -1,18 +1,17 @@
 package com.myai.app
 
 import android.app.AlertDialog
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.text.InputType
-import android.view.Gravity
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
-import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var webView: WebView
     private lateinit var prefs: android.content.SharedPreferences
@@ -24,23 +23,13 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        setContentView(root)
-
         webView = WebView(this)
         val settings: WebSettings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
         webView.webViewClient = WebViewClient()
-        root.addView(
-            webView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-        )
+        setContentView(webView)
 
         val savedLink = prefs.getString(LINK_KEY, null)
         if (savedLink.isNullOrBlank()) {
