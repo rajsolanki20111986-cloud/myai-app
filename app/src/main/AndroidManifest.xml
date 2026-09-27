@@ -6,8 +6,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="MyAI"
-        android:theme="@android:style/Theme.NoTitleBar">
+        android:label="MyAI">
 
         <activity
             android:name=".MainActivity"
