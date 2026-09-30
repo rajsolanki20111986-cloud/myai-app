@@ -2,7 +2,6 @@ package com.myai.app
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -10,7 +9,6 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -19,15 +17,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import org.json.JSONArray
-import org.json.JSONObject
 import kotlin.math.abs
-
-data class SavedUI(
-    val id: Long,
-    var name: String,
-    var url: String
-)
 
 class MainActivity : Activity() {
 
@@ -39,15 +29,12 @@ class MainActivity : Activity() {
     private var drawerOpen = false
     private var downX = 0f
 
-    private val prefsName = "myai_prefs"
-    private val uiKey = "saved_uis"
-
     private val savedUIs = mutableListOf<SavedUI>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        loadSavedUIs()
+        savedUIs.addAll(UIStorage.load(this))
         showHome()
     }
 
@@ -55,7 +42,10 @@ class MainActivity : Activity() {
         return (value * resources.displayMetrics.density).toInt()
     }
 
-    private fun background(color: Int, radius: Float = 0f): GradientDrawable {
+    private fun background(
+        color: Int,
+        radius: Float = 0f
+    ): GradientDrawable {
         return GradientDrawable().apply {
             setColor(color)
             if (radius > 0) {
@@ -105,7 +95,6 @@ class MainActivity : Activity() {
     private fun createHomeContent() {
 
         val topBar = LinearLayout(this)
-        topBar.orientation = LinearLayout.HORIZONTAL
         topBar.gravity = Gravity.CENTER_VERTICAL
         topBar.setPadding(dp(18), dp(12), dp(18), dp(12))
         topBar.setBackgroundColor(Color.rgb(18, 18, 18))
@@ -115,6 +104,7 @@ class MainActivity : Activity() {
         menuButton.textSize = 28f
         menuButton.setTextColor(Color.WHITE)
         menuButton.gravity = Gravity.CENTER
+
         menuButton.setOnClickListener {
             openDrawer()
         }
@@ -127,16 +117,14 @@ class MainActivity : Activity() {
         val titleArea = LinearLayout(this)
         titleArea.orientation = LinearLayout.VERTICAL
 
-        val title = text("MyAI", 21f)
-
-        val subtitle = text(
-            "Your personal UI workspace",
-            12f,
-            Color.LTGRAY
+        titleArea.addView(text("MyAI", 21f))
+        titleArea.addView(
+            text(
+                "Your personal UI workspace",
+                12f,
+                Color.LTGRAY
+            )
         )
-
-        titleArea.addView(title)
-        titleArea.addView(subtitle)
 
         topBar.addView(
             titleArea,
@@ -153,23 +141,28 @@ class MainActivity : Activity() {
 
         val content = LinearLayout(this)
         content.orientation = LinearLayout.VERTICAL
-        content.setPadding(dp(18), dp(22), dp(18), dp(30))
-
-        val heading = text("Your UIs", 25f)
-        content.addView(heading)
-
-        val description = text(
-            "Open your saved AI tools and websites from one place.",
-            14f,
-            Color.GRAY
+        content.setPadding(
+            dp(18),
+            dp(22),
+            dp(18),
+            dp(30)
         )
 
-        val descriptionParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
+        content.addView(text("Your UIs", 25f))
+
+        content.addView(
+            text(
+                "Open your saved AI tools and websites from one place.",
+                14f,
+                Color.GRAY
+            ),
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dp(5), 0, dp(18))
+            }
         )
-        descriptionParams.setMargins(0, dp(5), 0, dp(18))
-        content.addView(description, descriptionParams)
 
         val addButton = Button(this)
         addButton.text = "+  New UI"
@@ -192,6 +185,7 @@ class MainActivity : Activity() {
         )
 
         if (savedUIs.isEmpty()) {
+
             val emptyBox = LinearLayout(this)
             emptyBox.orientation = LinearLayout.VERTICAL
             emptyBox.gravity = Gravity.CENTER
@@ -202,33 +196,32 @@ class MainActivity : Activity() {
                 dp(40)
             )
 
-            val emptyTitle = text(
-                "No UI saved",
-                18f
-            )
-            emptyTitle.gravity = Gravity.CENTER
+            val title = text("No UI saved", 18f)
+            title.gravity = Gravity.CENTER
 
-            val emptyText = text(
+            val message = text(
                 "Tap + New UI to add your first AI or website.",
                 14f,
                 Color.GRAY
             )
-            emptyText.gravity = Gravity.CENTER
+            message.gravity = Gravity.CENTER
 
-            emptyBox.addView(emptyTitle)
-            emptyBox.addView(emptyText)
+            emptyBox.addView(title)
+            emptyBox.addView(message)
 
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            content.addView(
+                emptyBox,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, dp(20), 0, 0)
+                }
             )
-            params.setMargins(0, dp(20), 0, 0)
-
-            content.addView(emptyBox, params)
 
         } else {
-            savedUIs.forEach { ui ->
-                addUICard(content, ui)
+            savedUIs.forEach {
+                addUICard(content, it)
             }
         }
 
@@ -253,7 +246,7 @@ class MainActivity : Activity() {
         card.setPadding(
             dp(18),
             dp(18),
-            dp(18),
+            dp(14),
             dp(14)
         )
         card.background = background(
@@ -261,15 +254,15 @@ class MainActivity : Activity() {
             14f
         )
 
-        val name = text(ui.name, 19f)
-        card.addView(name)
+        card.addView(text(ui.name, 19f))
 
-        val preview = text(
-            "\n${ui.url}",
-            13f,
-            Color.GRAY
+        card.addView(
+            text(
+                "\n${ui.url}",
+                13f,
+                Color.GRAY
+            )
         )
-        card.addView(preview)
 
         val buttons = LinearLayout(this)
         buttons.gravity = Gravity.END
@@ -296,13 +289,15 @@ class MainActivity : Activity() {
 
         card.addView(buttons)
 
-        val params = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
+        parent.addView(
+            card,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dp(16), 0, 0)
+            }
         )
-        params.setMargins(0, dp(16), 0, 0)
-
-        parent.addView(card, params)
     }
 
     private fun smallButton(label: String): Button {
@@ -352,27 +347,25 @@ class MainActivity : Activity() {
         )
         drawer.setBackgroundColor(Color.rgb(17, 17, 17))
 
-        val drawerParams = FrameLayout.LayoutParams(
+        val params = FrameLayout.LayoutParams(
             dp(300),
             FrameLayout.LayoutParams.MATCH_PARENT
         )
 
-        drawerParams.gravity = Gravity.START
+        params.gravity = Gravity.START
+
         drawer.translationX = -dp(300).toFloat()
 
-        root.addView(drawer, drawerParams)
+        root.addView(drawer, params)
 
-        val drawerTitle = text("MyAI", 25f)
-        drawer.addView(drawerTitle)
-
-        val drawerSubtitle = text(
-            "Workspace",
-            13f,
-            Color.GRAY
-        )
+        drawer.addView(text("MyAI", 25f))
 
         drawer.addView(
-            drawerSubtitle,
+            text(
+                "Workspace",
+                13f,
+                Color.GRAY
+            ),
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -428,13 +421,15 @@ class MainActivity : Activity() {
             action()
         }
 
-        val params = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(50)
+        drawer.addView(
+            item,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(50)
+            ).apply {
+                setMargins(0, 0, 0, dp(8))
+            }
         )
-        params.setMargins(0, 0, 0, dp(8))
-
-        drawer.addView(item, params)
     }
 
     private fun openDrawer() {
@@ -464,6 +459,7 @@ class MainActivity : Activity() {
     }
 
     private fun setupSwipe() {
+
         root.setOnTouchListener { _, event ->
 
             when (event.actionMasked) {
@@ -474,13 +470,20 @@ class MainActivity : Activity() {
                 }
 
                 MotionEvent.ACTION_UP -> {
+
                     val difference = event.x - downX
 
                     if (abs(difference) > dp(80)) {
 
-                        if (difference > 0 && downX < dp(70)) {
+                        if (
+                            difference > 0 &&
+                            downX < dp(70)
+                        ) {
                             openDrawer()
-                        } else if (difference < 0 && drawerOpen) {
+                        } else if (
+                            difference < 0 &&
+                            drawerOpen
+                        ) {
                             closeDrawer()
                         }
                     }
@@ -506,13 +509,9 @@ class MainActivity : Activity() {
 
         val nameInput = EditText(this)
         nameInput.hint = "UI name (optional)"
-        nameInput.setTextColor(Color.WHITE)
-        nameInput.setHintTextColor(Color.GRAY)
 
         val urlInput = EditText(this)
         urlInput.hint = "https://example.com"
-        urlInput.setTextColor(Color.WHITE)
-        urlInput.setHintTextColor(Color.GRAY)
         urlInput.inputType =
             InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_VARIATION_URI
@@ -533,7 +532,8 @@ class MainActivity : Activity() {
                     url.startsWith("https://")
                 ) {
 
-                    var name = nameInput.text.toString().trim()
+                    var name =
+                        nameInput.text.toString().trim()
 
                     if (name.isBlank()) {
                         name = "UI ${savedUIs.size + 1}"
@@ -547,7 +547,7 @@ class MainActivity : Activity() {
                         )
                     )
 
-                    saveSavedUIs()
+                    UIStorage.save(this, savedUIs)
                     showHome()
                 }
             }
@@ -566,11 +566,18 @@ class MainActivity : Activity() {
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save") { _, _ ->
 
-                val newName = input.text.toString().trim()
+                val newName =
+                    input.text.toString().trim()
 
                 if (newName.isNotBlank()) {
+
                     ui.name = newName
-                    saveSavedUIs()
+
+                    UIStorage.save(
+                        this,
+                        savedUIs
+                    )
+
                     showHome()
                 }
             }
@@ -588,7 +595,12 @@ class MainActivity : Activity() {
             .setPositiveButton("Delete") { _, _ ->
 
                 savedUIs.remove(ui)
-                saveSavedUIs()
+
+                UIStorage.save(
+                    this,
+                    savedUIs
+                )
+
                 showHome()
             }
             .show()
@@ -596,48 +608,69 @@ class MainActivity : Activity() {
 
     private fun openUI(ui: SavedUI) {
 
+        val result = UrlSecurity.check(ui.url)
+
+        if (result.status == UrlSecurity.Status.INVALID) {
+
+            AlertDialog.Builder(this)
+                .setTitle("Invalid URL")
+                .setMessage(
+                    "This UI has an invalid web address."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+
+            return
+        }
+
         val webView = WebView(this)
 
-        val settings: WebSettings = webView.settings
+        val settings: WebSettings =
+            webView.settings
 
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient =
+            WebViewClient()
 
         webView.loadUrl(ui.url)
 
         val screen = LinearLayout(this)
-        screen.orientation = LinearLayout.VERTICAL
-        screen.setBackgroundColor(Color.BLACK)
+        screen.orientation =
+            LinearLayout.VERTICAL
+
+        screen.setBackgroundColor(
+            Color.BLACK
+        )
 
         val topBar = LinearLayout(this)
-        topBar.gravity = Gravity.CENTER_VERTICAL
+        topBar.gravity =
+            Gravity.CENTER_VERTICAL
+
         topBar.setPadding(
             dp(10),
             dp(5),
             dp(10),
             dp(5)
         )
-        topBar.setBackgroundColor(Color.rgb(18, 18, 18))
+
+        topBar.setBackgroundColor(
+            Color.rgb(18, 18, 18)
+        )
 
         val homeButton = Button(this)
         homeButton.text = "← Home"
+
         homeButton.setOnClickListener {
             showHome()
         }
 
         topBar.addView(homeButton)
 
-        val title = text(
-            ui.name,
-            17f
-        )
-        title.gravity = Gravity.CENTER_VERTICAL
-
         topBar.addView(
-            title,
+            text(ui.name, 17f),
             LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -673,80 +706,19 @@ class MainActivity : Activity() {
             .setTitle("Settings")
             .setMessage(
                 "MyAI settings will be added step by step.\n\n" +
-                "Website verification, permissions, " +
-                "voice access and safety controls will be " +
-                "handled separately."
+                "Website verification, permissions, voice access " +
+                "and safety controls will be handled separately."
             )
             .setPositiveButton("OK", null)
             .show()
-    }
-
-    private fun saveSavedUIs() {
-
-        val array = JSONArray()
-
-        savedUIs.forEach { ui ->
-
-            val obj = JSONObject()
-
-            obj.put("id", ui.id)
-            obj.put("name", ui.name)
-            obj.put("url", ui.url)
-
-            array.put(obj)
-        }
-
-        getSharedPreferences(
-            prefsName,
-            Context.MODE_PRIVATE
-        )
-            .edit()
-            .putString(
-                uiKey,
-                array.toString()
-            )
-            .apply()
-    }
-
-    private fun loadSavedUIs() {
-
-        val data = getSharedPreferences(
-            prefsName,
-            Context.MODE_PRIVATE
-        )
-            .getString(uiKey, null)
-            ?: return
-
-        try {
-
-            val array = JSONArray(data)
-
-            for (i in 0 until array.length()) {
-
-                val obj = array.getJSONObject(i)
-
-                savedUIs.add(
-                    SavedUI(
-                        id = obj.getLong("id"),
-                        name = obj.getString("name"),
-                        url = obj.getString("url")
-                    )
-                )
-            }
-
-        } catch (_: Exception) {
-
-            savedUIs.clear()
-        }
     }
 
     override fun onBackPressed() {
 
         if (drawerOpen) {
             closeDrawer()
-            return
+        } else {
+            showHome()
         }
-
-        showHome()
     }
 }
